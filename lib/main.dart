@@ -5,6 +5,7 @@ import 'package:myenglishtool/pages/conversations_list_page.dart';
 import 'package:myenglishtool/pages/progress_page.dart';
 import 'package:myenglishtool/pages/ai_practice_screen.dart';
 import 'package:myenglishtool/pages/path_to_english.dart';
+import 'package:myenglishtool/pages/trading_dashboard_page.dart'; // Nueva
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -183,6 +184,20 @@ class _MyHomePageState extends State<MyHomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const PathToEnglish()),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: Text(
+                    'Bitcoin Trading',
+                    style: TextStyle(color: Color(0xFF000080)),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TradingDashboardPage(),
+                      ),
                     );
                   },
                 ),
