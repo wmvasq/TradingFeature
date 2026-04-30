@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../db_helper.dart';
 import '../models/trading_models.dart';
 
 /// Servicio de IA para análisis de trading
@@ -11,9 +12,15 @@ import '../models/trading_models.dart';
 /// 3. Analizar sentimiento de noticias
 /// 4. Dar recomendaciones personalizadas
 class TradingAIService {
-  static const String _apiKey = ''; // Misma API key de MiniMax
-  static const String _baseUrl = 'https://api.minimax.io/v1';
-  static const String _model = 'MiniMax-M2.7-highspeed';
+  final DBHelper _dbHelper = DBHelper();
+
+  Future<String> _getConfig(String key, String defaultValue) async {
+    return await _dbHelper.getAppConfigOrDefault(key, defaultValue);
+  }
+
+  Future<String> get apiKey async => await _getConfig('minimax_api_key', '');
+  Future<String> get baseUrl async => await _getConfig('minimax_base_url', 'https://api.minimax.io/v1');
+  Future<String> get model async => await _getConfig('minimax_model', 'MiniMax-M2.7-highspeed');
 
   // System prompt exclusivo para trading
   static const String _tradingSystemPrompt = '''
@@ -211,9 +218,17 @@ Responde en JSON:
 
   Future<String> _callAI({required List<Map<String, String>> messages}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/chat/completions');
+      final apiKeyValue = await apiKey;
+      final baseUrlValue = await baseUrl;
+      final modelValue = await model;
+
+      if (apiKeyValue.isEmpty) {
+        return 'Error: API Key no configurada. Configúrala en Settings.';
+      }
+
+      final uri = Uri.parse('$baseUrlValue/chat/completions');
       final body = jsonEncode({
-        'model': _model,
+        'model': modelValue,
         'messages': messages,
         'temperature': 0.7,
         'top_p': 0.9,
@@ -222,7 +237,7 @@ Responde en JSON:
       final response = await http.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer $apiKeyValue',
           'Content-Type': 'application/json',
         },
         body: body,
