@@ -21,7 +21,7 @@ class DBHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE conversations (
@@ -86,8 +86,9 @@ class DBHelper {
               exchanges INTEGER
             )
           ''');
-        // Tabla para configuración de la API
-        await db.execute('''
+        }
+        if (oldVersion < 5) {
+          await db.execute('''
             CREATE TABLE app_config (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               key TEXT UNIQUE NOT NULL,
