@@ -86,6 +86,14 @@ class DBHelper {
               exchanges INTEGER
             )
           ''');
+        // Tabla para configuración de la API
+        await db.execute('''
+            CREATE TABLE app_config (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              key TEXT UNIQUE NOT NULL,
+              value TEXT NOT NULL
+            )
+          ''');
         }
       },
     );
@@ -338,6 +346,54 @@ class DBHelper {
     }
 
     return count > 0 ? sum / count : 0.0;
+  }
+
+  /// Guardar configuración de la aplicación
+  Future<void> saveAppConfig(String key, String value) async {
+    final dbClient = await db;
+    await dbClient.execute(
+      'INSERT OR REPLACE INTO app_config (id, key, value) VALUES ((SELECT id FROM app_config WHERE key = ?), ?, ?)',
+      [key, key, value],
+    );
+  }
+
+  /// Obtener configuración de la aplicación
+  Future<String?> getAppConfig(String key) async {
+    final dbClient = await db;
+    final result = await dbClient.query(
+      'app_config',
+      where: 'key = ?',
+      whereArgs: [key],
+    );
+    if (result.isEmpty) return null;
+    return result.first['value'] as String;
+  }
+
+  /// Obtener toda la configuración
+  Future<Map<String, String>> getAllAppConfig() async {
+    final dbClient = await db;
+    final result = await dbClient.query('app_config');
+    final config = <String, String>{};
+    for (var row in result) {
+      config[row['key'] as String] = row['value'] as String;
+    }
+    return config;
+  }
+
+  /// Obtener el valor de configuración o un valor por defecto
+  Future<String> getAppConfigOrDefault(String key, String defaultValue) async {
+    final value = await getAppConfig(key);
+    return value ?? defaultValue;
+  }
+
+  /// Eliminar configuración
+  Future<void> deleteAppConfig(String key) async {
+    final dbClient = await db;
+    await dbClient.delete(
+      'app_config',
+      where: 'key = ?',
+      whereArgs: [key],
+    );
   }
 
   Future<int> getTotalPracticeMinutes() async {

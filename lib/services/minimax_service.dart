@@ -1,11 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../db_helper.dart';
 
 class MiniMaxService {
-  static const String _apiKey =
-      'xxxx';
-  static const String _baseUrl = 'https://api.minimax.io/v1';
-  static const String _model = 'MiniMax-M2.7-highspeed';
+  final DBHelper _dbHelper = DBHelper();
+
+  Future<String> _getConfig(String key, String defaultValue) async {
+    return await _dbHelper.getAppConfigOrDefault(key, defaultValue);
+  }
+
+  Future<String> get apiKey async => await _getConfig('minimax_api_key', '');
+  Future<String> get baseUrl async => await _getConfig('minimax_base_url', 'https://api.minimax.io/v1');
+  Future<String> get model async => await _getConfig('minimax_model', 'MiniMax-M2.7-highspeed');
 
   static const List<String> topics = [
     'Naturaleza',
@@ -78,13 +84,21 @@ Formato de respuesta (JSON):
 
   Future<String> _callAPI({required List<Map<String, String>> messages}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/chat/completions');
-      final body = jsonEncode({'model': _model, 'messages': messages});
+      final apiKeyValue = await apiKey;
+      final baseUrlValue = await baseUrl;
+      final modelValue = await model;
+      
+      if (apiKeyValue.isEmpty) {
+        return 'Error: API Key not configured. Please set it in Settings.';
+      }
+
+      final uri = Uri.parse('$baseUrlValue/chat/completions');
+      final body = jsonEncode({'model': modelValue, 'messages': messages});
 
       final http.Response response = await http.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer $apiKeyValue',
           'Content-Type': 'application/json',
         },
         body: body,
@@ -112,8 +126,11 @@ Formato de respuesta (JSON):
     }
   }
 
-  String getLastError() {
-    return 'API Key format: ${_apiKey.substring(0, 10)}...';
+  String getLastError(String apiKeyPreview) {
+    if (apiKeyPreview.isEmpty) {
+      return 'API Key not configured';
+    }
+    return 'API Key format: ${apiKeyPreview.substring(0, apiKeyPreview.length < 10 ? apiKeyPreview.length : 10)}...';
   }
 
   Map<String, dynamic>? parseResponse(String response) {
