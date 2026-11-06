@@ -9,6 +9,31 @@ class DBHelper {
 
   Database? _db;
 
+  /// Setups de trading guardados (ver lib/trading/setup_repository.dart).
+  static const _tradingSetupsTable = '''
+    CREATE TABLE trading_setups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      setup_key TEXT UNIQUE NOT NULL,
+      symbol TEXT NOT NULL,
+      asset_label TEXT NOT NULL,
+      interval TEXT NOT NULL,
+      strategy TEXT NOT NULL,
+      direction TEXT NOT NULL,
+      origin TEXT NOT NULL,
+      state TEXT NOT NULL,
+      entry REAL NOT NULL,
+      stop_loss REAL NOT NULL,
+      take_profit REAL NOT NULL,
+      summary TEXT,
+      signal_time INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      triggered_at INTEGER,
+      resolved_at INTEGER,
+      checked_until INTEGER NOT NULL,
+      candles_checked INTEGER NOT NULL DEFAULT 0
+    )
+  ''';
+
   Future<Database> get db async {
     if (_db != null) return _db!;
     _db = await _initDB();
@@ -21,7 +46,7 @@ class DBHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE conversations (
@@ -49,6 +74,23 @@ class DBHelper {
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
           )
         ''');
+        await db.execute('''
+          CREATE TABLE ai_practice_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            topic TEXT,
+            avg_score REAL,
+            exchanges INTEGER
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE app_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE NOT NULL,
+            value TEXT NOT NULL
+          )
+        ''');
+        await db.execute(_tradingSetupsTable);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -95,6 +137,9 @@ class DBHelper {
               value TEXT NOT NULL
             )
           ''');
+        }
+        if (oldVersion < 6) {
+          await db.execute(_tradingSetupsTable);
         }
       },
     );
@@ -390,11 +435,7 @@ class DBHelper {
   /// Eliminar configuración
   Future<void> deleteAppConfig(String key) async {
     final dbClient = await db;
-    await dbClient.delete(
-      'app_config',
-      where: 'key = ?',
-      whereArgs: [key],
-    );
+    await dbClient.delete('app_config', where: 'key = ?', whereArgs: [key]);
   }
 
   Future<int> getTotalPracticeMinutes() async {

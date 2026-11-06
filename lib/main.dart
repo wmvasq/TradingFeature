@@ -6,7 +6,7 @@ import 'package:myenglishtool/pages/progress_page.dart';
 import 'package:myenglishtool/pages/ai_practice_screen.dart';
 import 'package:myenglishtool/pages/path_to_english.dart';
 import 'package:myenglishtool/pages/settings_page.dart';
-import 'package:myenglishtool/pages/trading_dashboard_page.dart';
+import 'package:myenglishtool/trading/trading_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -197,7 +197,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                         builder: (_) => const TradingDashboardPage(),
+                         builder: (_) => const TradingPage(),
                       ),
                     );
                   },
