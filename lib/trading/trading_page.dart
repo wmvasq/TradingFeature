@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'backtest_page.dart';
 import 'candle_chart.dart';
 import 'market_data.dart';
 import 'models.dart';
@@ -130,6 +131,21 @@ class _TradingPageState extends State<TradingPage> {
     if (_result?.status != SetupStatus.entry) return;
     final setup = _currentSetup(SetupOrigin.auto);
     if (setup == null || _savedKeys.contains(setup.key)) return;
+    // Una estrategia puede dar entrada varias velas seguidas en el mismo
+    // movimiento: si ya hay un setup activo igual, no se abre otro (igual
+    // que en el backtest).
+    final duplicate = (await _setups.all()).any(
+      (s) =>
+          !s.state.isFinal &&
+          s.symbol == setup.symbol &&
+          s.interval == setup.interval &&
+          s.strategy == setup.strategy &&
+          s.direction == setup.direction,
+    );
+    if (duplicate) {
+      if (mounted) setState(() => _savedKeys.add(setup.key));
+      return;
+    }
     final inserted = await _setups.save(setup);
     if (!mounted) return;
     setState(() => _savedKeys.add(setup.key));
@@ -181,6 +197,20 @@ class _TradingPageState extends State<TradingPage> {
       appBar: AppBar(
         title: const Text('Trading'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.query_stats),
+            tooltip: 'Backtest',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BacktestPage(
+                  asset: _asset,
+                  interval: _interval,
+                  strategy: _strategy,
+                ),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.bookmarks_outlined),
             tooltip: 'Setups guardados',

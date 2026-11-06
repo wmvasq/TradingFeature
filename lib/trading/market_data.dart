@@ -48,6 +48,38 @@ class Asset {
   final MarketDataSource source;
 
   const Asset(this.label, this.symbol, this.source);
+
+  /// Las últimas [count] velas cerradas, bajadas por páginas de 1000
+  /// (más de lo que permite una sola llamada a la API).
+  Future<List<Candle>> fetchHistory({
+    required String interval,
+    required int count,
+    void Function(int downloaded)? onProgress,
+  }) async {
+    final step = intervalDurations[interval]!;
+    var from = DateTime.now().subtract(step * (count + 1));
+    final candles = <Candle>[];
+    while (true) {
+      final page = await source.fetchCandles(
+        symbol: symbol,
+        interval: interval,
+        limit: 1000,
+        startTime: from,
+      );
+      for (final c in page) {
+        if (candles.isEmpty || c.openTime.isAfter(candles.last.openTime)) {
+          candles.add(c);
+        }
+      }
+      onProgress?.call(candles.length);
+      // Página incompleta: llegamos a la vela más reciente
+      if (page.length < 900) break;
+      from = page.last.openTime.add(const Duration(milliseconds: 1));
+    }
+    return candles.length > count
+        ? candles.sublist(candles.length - count)
+        : candles;
+  }
 }
 
 final _binanceSpot = BinanceSource(
